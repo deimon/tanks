@@ -5,6 +5,22 @@
 #include <osgDB/ReadFile>
 #include <osgViewer/ViewerEventHandlers>
 
+#include <string.h>
+
+struct ObjectState 
+{
+  ObjectState() {}
+  ObjectState(unsigned int id, osg::Vec3d pos, double angle)
+    : _id(id)
+    , _pos(pos)
+    , _angle(angle)
+  {}
+
+  unsigned int _id;
+  osg::Vec3d _pos;
+  double _angle;
+};
+
 Tank::Tank(osg::Geode* tankGeod, osg::Vec3d position)
 : _position(position)
 {
@@ -37,6 +53,13 @@ void Tank::Right()
 {
   _angle -= 2.0;
   _up = osg::Vec3d(0.0, 1.0, 0.0) * osg::Matrix::rotate(osg::DegreesToRadians(_angle), 0.0, 0.0, 1.0);
+  setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(_angle), 0.0, 0.0, 1.0) * osg::Matrix::translate(_position));
+}
+
+void Tank::SetPosition(osg::Vec3d position, double angle)
+{
+  _angle = angle;
+  _position = position;
   setMatrix(osg::Matrix::rotate(osg::DegreesToRadians(_angle), 0.0, 0.0, 1.0) * osg::Matrix::translate(_position));
 }
 
@@ -95,6 +118,30 @@ World::World()
   }
 
   addChild(bloksGeode);
+
+  _socket = new CActiveSocket();
+  _socket->Initialize();
+  if(_socket->Open((const uint8 *)"127.0.0.1", 6789))
+  {
+    if(_socket->Receive(sizeof(unsigned int)))
+    {
+      _tank->SetID(*((unsigned int*)_socket->GetData()));
+    }
+  }
+  else
+  {
+    delete _socket;
+    _socket = NULL;
+  }
+}
+
+World::~World()
+{
+  if(_socket)
+  {
+    _socket->Close();
+    delete _socket;
+  }
 }
 
 bool World::collision(osg::Vec3d pos)
@@ -156,4 +203,38 @@ void World::update(double time)
 
   if(_autopilot)
     autopilot();
+
+  if(_socket)
+  {
+    ObjectState myTankData(_tank->GetID(), _tank->GetPosition(), _tank->GetAngle());
+    _socket->Send((const uint8 *)&myTankData, sizeof(ObjectState));
+
+    if(_socket->Receive(sizeof(unsigned int)))
+    {
+      unsigned int sizeSS = *((unsigned int*)_socket->GetData());
+
+      if(_socket->Receive(sizeof(ObjectState) * sizeSS))
+      {
+        ObjectState* srvState = (ObjectState*)_socket->GetData();
+
+        for(unsigned int i = 0; i < sizeSS; i++)
+        {
+          unsigned int id = srvState[i]._id;
+          osg::Vec3d pos = srvState[i]._pos;
+          double angle = srvState[i]._angle;
+
+          if(_tank->GetID() != id)
+          {
+            if(_tanks.count(id) == 0)
+            {
+              _tanks[id] = new Tank(_tankGeode, pos);
+              addChild(_tanks[id]);
+            }
+            else
+              _tanks[id]->SetPosition(pos, angle);
+          }
+        }
+      }
+    }
+  }
 }

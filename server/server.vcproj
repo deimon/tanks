@@ -264,6 +264,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="../clsocket;../osg/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -282,7 +283,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="osg.lib osgUtil.lib osgDB.lib osgGA.lib osgViewer.lib osgText.lib osgManipulator.lib OpenThreads.lib clsocket.lib WSock32.lib"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="../clsocket;../osg/lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"

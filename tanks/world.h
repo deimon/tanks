@@ -1,4 +1,5 @@
 #include <osg/MatrixTransform>
+#include "ActiveSocket.h"
 
 class Tank : public osg::MatrixTransform
 {
@@ -12,12 +13,17 @@ public:
   void Right();
 
   const osg::Vec3d& GetPosition() { return _position; }
+  void SetPosition(osg::Vec3d position, double angle);
   const double& GetAngle() { return _angle; }
+
+  void SetID(unsigned int id) { _id = id; }
+  unsigned int GetID() { return _id; }
 
 protected:
   osg::Vec3d _position;
   osg::Vec3d _up;
   double _angle;
+  unsigned int _id;
 };
 
 struct Block
@@ -34,7 +40,7 @@ class World : public osg::Group
 public:
   World();
 
-  ~World() {}
+  ~World();
 
   bool collision(osg::Vec3d pos);
 
@@ -53,6 +59,9 @@ protected:
 
   osg::ref_ptr<osg::Geode> _tankGeode;
   Tank* _tank;
+  std::map<unsigned int, Tank*> _tanks;
 
   std::vector<Block> _bloks;
+
+  CActiveSocket* _socket;
 };
